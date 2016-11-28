@@ -1,0 +1,8 @@
+Nov 27 14:33:59 hostname1 log file line 1
+Nov 27 14:34:05 hostname1 log file line 2
+Nov 27 14:34:05 hostname1 log file line 3
+Nov 27 15:07:47 hostname1 log file line 4
+Nov 27 15:07:47 hostname1 log file line 5
+Nov 27 15:07:47 hostname1 log file line 6
+Nov 27 15:07:47 hostname1 log file line 7
+Nov 27 15:07:47 hostname1 log file line 8
