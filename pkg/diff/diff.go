@@ -2,6 +2,7 @@ package diff
 
 import (
 	"bufio"
+	"io"
 	"io/ioutil"
 	"os"
 	"time"
@@ -41,6 +42,23 @@ func (l *line) setTime() error {
 func findTimeFormat(s string) (string, error) {
 	//TODO: Make this for real.
 	return "Jan 02 15:04:05", nil
+}
+
+func lineReader(r io.Reader) func() (line, bool) {
+	scanner := bufio.NewScanner(r)
+	return func() (line, bool) {
+		ok := scanner.Scan()
+		if !ok {
+			return line{}, ok
+		}
+
+		t := scanner.Text()
+		l, err := newLine(t)
+		if err != nil {
+			log.Fatal(err)
+		}
+		return l, ok
+	}
 }
 
 // ByOldestLines diffs files based on the time each line was logged and returns

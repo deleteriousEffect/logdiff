@@ -1,6 +1,9 @@
 package diff
 
 import (
+	"fmt"
+	"os"
+	"strings"
 	"testing"
 	"time"
 )
@@ -46,5 +49,25 @@ func TestNewLine(t *testing.T) {
 	if line.time != expected {
 		t.Errorf("Line time does not equal text.\nExpected: %v\nGot:%v",
 			expected, line.time)
+	}
+}
+
+func TestLineReader(t *testing.T) {
+	f, err := os.Open("../../test/log1.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	nextLine := lineReader(f)
+
+	i := 1
+	for {
+		l, ok := nextLine()
+		if !ok {
+			break
+		}
+		if !strings.Contains(l.content, fmt.Sprintf("line %d", i)) {
+			t.Errorf("Expected to read line %d", i)
+		}
+		i++
 	}
 }
