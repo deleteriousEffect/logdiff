@@ -10,6 +10,21 @@ import (
 
 import "log"
 
+type line struct {
+	// The txt of the line, including timestamp.
+	content string
+	// The parsed time of the line.
+	time time.Time
+}
+
+func newLine(s string) (line, error) {
+	f, err := getLineTime(s)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return line{s, f}, nil
+}
+
 // ByOldestLines diffs files based on the time each line was logged and returns
 // a []string of temporary file names where the returns were written.
 func ByOldestLines(f ...*os.File) ([]*os.File, error) {
