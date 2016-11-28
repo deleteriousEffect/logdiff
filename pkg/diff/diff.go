@@ -2,7 +2,6 @@ package diff
 
 import (
 	"bufio"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"time"
@@ -18,11 +17,30 @@ type line struct {
 }
 
 func newLine(s string) (line, error) {
-	t, err := getLineTime(s)
+	l := line{s, time.Time{}}
+	err := l.setTime()
 	if err != nil {
-		log.Fatal(err)
+		return line{}, err
 	}
-	return line{s, t}, nil
+	return l, nil
+}
+
+func (l *line) setTime() error {
+	format, err := findTimeFormat(l.content)
+	if err != nil {
+		return err
+	}
+	lineTime, err := time.Parse(format, l.content[:len(format)])
+	if err != nil {
+		return err
+	}
+	l.time = lineTime
+	return nil
+}
+
+func findTimeFormat(s string) (string, error) {
+	//TODO: Make this for real.
+	return "Jan 02 15:04:05", nil
 }
 
 // ByOldestLines diffs files based on the time each line was logged and returns
@@ -64,22 +82,4 @@ func ByOldestLines(f ...*os.File) ([]*os.File, error) {
 		}
 	}
 	return tempFiles, nil
-}
-
-func getLineTime(s string) (time.Time, error) {
-	format, err := findTimeFormat(s)
-	if err != nil {
-		fmt.Println(err)
-		return time.Time{}, nil
-	}
-	lineTime, err := time.Parse(format, s[:len(format)])
-	if err != nil {
-		fmt.Println(err)
-	}
-	return lineTime, nil
-}
-
-func findTimeFormat(s string) (string, error) {
-	//TODO: Make this for real.
-	return "Jan 02 15:04:05", nil
 }

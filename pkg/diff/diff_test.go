@@ -5,13 +5,13 @@ import (
 	"time"
 )
 
-func TestGetLineTime(t *testing.T) {
+func TestSetTime(t *testing.T) {
 
-	line := "Nov 27 15:07:47 hostname1 log file line 5"
+	l := line{"Nov 27 15:07:47 hostname1 log file line 5", time.Time{}}
 	format := "Jan 02 15:04:05"
 	date := "Nov 27 15:07:47"
 
-	actual, err := getLineTime(line)
+	err := l.setTime()
 	if err != nil {
 		t.Error(err)
 	}
@@ -20,8 +20,8 @@ func TestGetLineTime(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if actual != expected {
-		t.Errorf("Expected time to be %s got %s", expected, actual)
+	if l.time != expected {
+		t.Errorf("Expected time to be %s got %s", expected, l.time)
 	}
 }
 
