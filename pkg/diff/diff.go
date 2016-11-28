@@ -18,11 +18,11 @@ type line struct {
 }
 
 func newLine(s string) (line, error) {
-	f, err := getLineTime(s)
+	t, err := getLineTime(s)
 	if err != nil {
 		log.Fatal(err)
 	}
-	return line{s, f}, nil
+	return line{s, t}, nil
 }
 
 // ByOldestLines diffs files based on the time each line was logged and returns
