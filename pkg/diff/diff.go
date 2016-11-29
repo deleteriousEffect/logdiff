@@ -91,11 +91,14 @@ func ByOldestLines(f ...io.ReadWriter) ([]*os.File, error) {
 		tempFiles[i] = temp
 		lineReaders[i] = lineReader(file)
 	}
+
 	for {
 		reachedEnd := 0
+		// Create a new line from each file if the line content is blank.
 		for i, l := range lines {
 			if l.content == "" {
 				l, ok := lineReaders[i]()
+				// If we can't read it, assume we've reached the end of the file.
 				if !ok {
 					reachedEnd++
 				}
@@ -103,15 +106,27 @@ func ByOldestLines(f ...io.ReadWriter) ([]*os.File, error) {
 			}
 		}
 
+		// If a file starts with the oldest timestamp, write it to the tempfiles.
+		// Otherwise, write a newline.
 		for i, f := range tempFiles {
-			_, err := f.WriteString(lines[i].content)
+			oldest := oldestTime(lines...)
+			if lines[i].time.Equal(oldest) {
+				_, err := f.WriteString(lines[i].content)
+				if err != nil {
+					return nil, err
+				}
+				lines[i] = line{}
+				continue
+			}
+			_, err := f.WriteString("\n")
 			if err != nil {
 				return nil, err
 			}
+
 		}
+		// If we've reached the end of every file, we're done.
 		if reachedEnd >= numFiles {
-			break
+			return tempFiles, nil
 		}
 	}
-	return tempFiles, nil
 }
