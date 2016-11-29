@@ -71,3 +71,14 @@ func TestLineReader(t *testing.T) {
 		i++
 	}
 }
+
+func TestOldestTime(t *testing.T) {
+	times := []line{line{"", time.Now()}, line{"", time.Now()}, line{"", time.Time{}}}
+
+	actual := oldestTime(times...)
+	expected := time.Time{}
+
+	if expected != actual {
+		t.Errorf("Expected: %s, Got: %s", expected, actual)
+	}
+}
