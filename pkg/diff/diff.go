@@ -2,13 +2,13 @@ package diff
 
 import (
 	"bufio"
+	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"os"
 	"time"
 )
-
-import "log"
 
 type line struct {
 	// The txt of the line, including timestamp.
@@ -63,38 +63,41 @@ func lineReader(r io.Reader) func() (line, bool) {
 
 // ByOldestLines diffs files based on the time each line was logged and returns
 // a []string of temporary file names where the returns were written.
-func ByOldestLines(f ...*os.File) ([]*os.File, error) {
+func ByOldestLines(f ...io.ReadWriter) ([]*os.File, error) {
 
 	numFiles := len(f)
 
-	// Initialize tempfiles, scanners, and buffers.
+	// Initialize tempfiles, scanners, and lines.
 	tempFiles := make([]*os.File, numFiles)
-	scanners := make([]*bufio.Scanner, numFiles)
-	buffers := make([]string, numFiles)
+	lineReaders := make([]func() (line, bool), numFiles)
+	lines := make([]line, numFiles)
 	for i, file := range f {
-		temp, err := ioutil.TempFile("/tmp", file.Name())
+		temp, err := ioutil.TempFile("/tmp", fmt.Sprintf("logdiff_tmp%d", i))
 		if err != nil {
 			log.Fatal(err)
 			return nil, err
 		}
 		tempFiles[i] = temp
-		scanners[i] = bufio.NewScanner(file)
+		lineReaders[i] = lineReader(file)
 	}
-
-	reachedEnd := 0
 	for {
-		for i := 0; i < numFiles; i++ {
-			if buffers[i] == "" {
-				ok := scanners[i].Scan()
+		reachedEnd := 0
+		for i, l := range lines {
+			if l.content == "" {
+				l, ok := lineReaders[i]()
 				if !ok {
-					buffers[i] = "\n"
 					reachedEnd++
-					continue
 				}
-				buffers[i] = scanners[i].Text()
+				lines[i] = l
 			}
 		}
 
+		for i, f := range tempFiles {
+			_, err := f.WriteString(lines[i].content)
+			if err != nil {
+				return nil, err
+			}
+		}
 		if reachedEnd >= numFiles {
 			break
 		}
