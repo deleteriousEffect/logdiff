@@ -72,6 +72,19 @@ func oldestTime(lines ...line) time.Time {
 	return oldest
 }
 
+func oldestLines(lines ...line) []string {
+	oldest := []string{}
+	ot := oldestTime(lines...)
+	for _, l := range lines {
+		if l.time.Equal(ot) || l.time.Before(ot) {
+			oldest = append(oldest, l.content)
+		} else {
+			oldest = append(oldest, "")
+		}
+	}
+	return oldest
+}
+
 // ByOldestLines diffs files based on the time each line was logged and returns
 // a []string of temporary file names where the returns were written.
 func ByOldestLines(f ...io.ReadWriter) ([]*os.File, error) {

@@ -3,6 +3,7 @@ package diff
 import (
 	"fmt"
 	"os"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -80,5 +81,21 @@ func TestOldestTime(t *testing.T) {
 
 	if expected != actual {
 		t.Errorf("Expected: %s, Got: %s", expected, actual)
+	}
+}
+
+func TestOldestLines(t *testing.T) {
+	var linesTests = []struct {
+		in  []line
+		out []string
+	}{
+		{[]line{line{"line1", time.Now()}}, []string{"line1"}},
+		{[]line{line{"line1", time.Now()}, line{"line2", time.Time{}}}, []string{"", "line2"}},
+	}
+	for _, lt := range linesTests {
+		lines := oldestLines(lt.in...)
+		if !reflect.DeepEqual(lines, lt.out) {
+			t.Errorf("Expected: %s, Got: %s", lt.out, lines)
+		}
 	}
 }
