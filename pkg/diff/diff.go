@@ -2,10 +2,6 @@ package diff
 
 import (
 	"bufio"
-	"fmt"
-	"io"
-	"io/ioutil"
-	"log"
 	"os"
 	"time"
 )
@@ -39,26 +35,32 @@ func (l *line) setTime() error {
 	return nil
 }
 
+type log struct {
+	file *os.File
+}
+
+func newLog(f *os.File) (log, error) {
+	return log{f}, nil
+}
+
+func (lg log) popLine() (line, bool) {
+	s := bufio.NewScanner(lg.file)
+	ok := s.Scan()
+	if !ok {
+		return line{}, ok
+	}
+
+	t := s.Text()
+	ln, err := newLine(t)
+	if err != nil {
+		return line{}, false
+	}
+	return ln, ok
+}
+
 func findTimeFormat(s string) (string, error) {
 	//TODO: Make this for real.
 	return "Jan 02 15:04:05", nil
-}
-
-func lineReader(r io.Reader) func() (line, bool) {
-	scanner := bufio.NewScanner(r)
-	return func() (line, bool) {
-		ok := scanner.Scan()
-		if !ok {
-			return line{}, ok
-		}
-
-		t := scanner.Text()
-		l, err := newLine(t)
-		if err != nil {
-			log.Fatal(err)
-		}
-		return l, ok
-	}
 }
 
 func oldestTime(lines ...line) time.Time {
@@ -85,61 +87,61 @@ func oldestLines(lines ...line) []string {
 	return oldest
 }
 
-// ByOldestLines diffs files based on the time each line was logged and returns
-// a []string of temporary file names where the returns were written.
-func ByOldestLines(f ...io.ReadWriter) ([]*os.File, error) {
-
-	numFiles := len(f)
-
-	// Initialize tempfiles, scanners, and lines.
-	tempFiles := make([]*os.File, numFiles)
-	lineReaders := make([]func() (line, bool), numFiles)
-	lines := make([]line, numFiles)
-	for i, file := range f {
-		temp, err := ioutil.TempFile("/tmp", fmt.Sprintf("logdiff_tmp%d", i))
-		if err != nil {
-			log.Fatal(err)
-			return nil, err
-		}
-		tempFiles[i] = temp
-		lineReaders[i] = lineReader(file)
-	}
-
-	for {
-		reachedEnd := 0
-		// Create a new line from each file if the line content is blank.
-		for i, l := range lines {
-			if l.content == "" {
-				l, ok := lineReaders[i]()
-				// If we can't read it, assume we've reached the end of the file.
-				if !ok {
-					reachedEnd++
-				}
-				lines[i] = l
-			}
-		}
-
-		// If a file starts with the oldest timestamp, write it to the tempfiles.
-		// Otherwise, write a newline.
-		for i, f := range tempFiles {
-			oldest := oldestTime(lines...)
-			if lines[i].time.Equal(oldest) {
-				_, err := f.WriteString(lines[i].content)
-				if err != nil {
-					return nil, err
-				}
-				lines[i] = line{}
-				continue
-			}
-			_, err := f.WriteString("\n")
-			if err != nil {
-				return nil, err
-			}
-
-		}
-		// If we've reached the end of every file, we're done.
-		if reachedEnd >= numFiles {
-			return tempFiles, nil
-		}
-	}
-}
+// ByOldestLines diffs bufio.Scanners based on the time each line was logged and returns
+// a array of temporary file pointers where the returns were written.
+// func ByOldestLines(s ...bufio.Scanner) ([]*os.File, error) {
+//
+//	numFiles := len(f)
+//
+//	// Initialize tempfiles, scanners, and lines.
+//	tempFiles := make([]*os.File, numFiles)
+//	lineReaders := make([]func() (line, bool), numFiles)
+//	lines := make([]line, numFiles)
+//	for i, file := range f {
+//		temp, err := ioutil.TempFile("/tmp", fmt.Sprintf("logdiff_tmp%d", i))
+//		if err != nil {
+//			log.Fatal(err)
+//			return nil, err
+//		}
+//		tempFiles[i] = temp
+//		lineReaders[i] = lineReader(file)
+//	}
+//
+//	for {
+//		reachedEnd := 0
+//		// Create a new line from each file if the line content is blank.
+//		for i, l := range lines {
+//			if l.content == "" {
+//				l, ok := lineReaders[i]()
+//				// If we can't read it, assume we've reached the end of the file.
+//				if !ok {
+//					reachedEnd++
+//				}
+//				lines[i] = l
+//			}
+//		}
+//
+//		// If a file starts with the oldest timestamp, write it to the tempfiles.
+//		// Otherwise, write a newline.
+//		for i, f := range tempFiles {
+//			oldest := oldestTime(lines...)
+//			if lines[i].time.Equal(oldest) {
+//				_, err := f.WriteString(lines[i].content)
+//				if err != nil {
+//					return nil, err
+//				}
+//				lines[i] = line{}
+//				continue
+//			}
+//			_, err := f.WriteString("\n")
+//			if err != nil {
+//				return nil, err
+//			}
+//
+//		}
+//		// If we've reached the end of every file, we're done.
+//		if reachedEnd >= numFiles {
+//			return tempFiles, nil
+//		}
+//	}
+//}

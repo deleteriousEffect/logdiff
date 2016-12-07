@@ -58,11 +58,15 @@ func TestLineReader(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	nextLine := lineReader(f)
+	lg, err := newLog(f)
+	defer lg.file.Close()
+	if err != nil {
+		t.Error(err)
+	}
 
 	i := 1
 	for {
-		l, ok := nextLine()
+		l, ok := lg.popLine()
 		if !ok {
 			break
 		}
@@ -99,3 +103,26 @@ func TestOldestLines(t *testing.T) {
 		}
 	}
 }
+
+//func TestByOldestLines(t *testing.T) {
+//	var oldestLinesTests = []struct {
+//		in  []*bufio.Scanner
+//		out [][]string
+//	}{
+//		{[]*bufio.Scanner{
+//			bufio.NewScanner(strings.NewReader("Nov 27 14:33:59 hostname1 log file line 1\n")),
+//			bufio.NewScanner(strings.NewReader("Nov 27 15:07:47 hostname2 log file line 1\n"))},
+//			[][]string{
+//				{"Nov 27 14:33:59 hostname1 log file line 1\n", "\n"},
+//				{"\n", "Nov 27 15:07:47 hostname2 log file line 1\n"}}},
+//	}
+//	for _, blt := range oldestLinesTests {
+//		files, err := ByOldestLines(blt.in)
+//		if err != nil {
+//			t.Error(err)
+//		}
+//		if true {
+//			t.Error(files)
+//		}
+//	}
+//}
