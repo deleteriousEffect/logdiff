@@ -1,6 +1,7 @@
 package diff
 
 import (
+	"bufio"
 	"fmt"
 	"os"
 	"reflect"
@@ -58,8 +59,8 @@ func TestLineReader(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer f.Close()
 	lg, err := newLog(f)
-	defer lg.file.Close()
 	if err != nil {
 		t.Error(err)
 	}
@@ -104,25 +105,41 @@ func TestOldestLines(t *testing.T) {
 	}
 }
 
-//func TestByOldestLines(t *testing.T) {
-//	var oldestLinesTests = []struct {
-//		in  []*bufio.Scanner
-//		out [][]string
-//	}{
-//		{[]*bufio.Scanner{
-//			bufio.NewScanner(strings.NewReader("Nov 27 14:33:59 hostname1 log file line 1\n")),
-//			bufio.NewScanner(strings.NewReader("Nov 27 15:07:47 hostname2 log file line 1\n"))},
-//			[][]string{
-//				{"Nov 27 14:33:59 hostname1 log file line 1\n", "\n"},
-//				{"\n", "Nov 27 15:07:47 hostname2 log file line 1\n"}}},
-//	}
-//	for _, blt := range oldestLinesTests {
-//		files, err := ByOldestLines(blt.in)
-//		if err != nil {
-//			t.Error(err)
-//		}
-//		if true {
-//			t.Error(files)
-//		}
-//	}
-//}
+func TestByOldestLines(t *testing.T) {
+	l1, err := newLog(strings.NewReader("Nov 27 14:33:59 hostname1 log file line 1\n"))
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+	l2, err := newLog(strings.NewReader("Nov 27 15:07:47 hostname2 log file line 1\n"))
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+	logs := []log{l1, l2}
+	files, err := ByOldestLines(logs...)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	if len(files) == 0 {
+		t.Fatalf("No files returned: %v", files)
+	}
+
+	expected := [][]string{
+		{"Nov 27 14:33:59 hostname1 log file line 1\n", "\n"},
+		{"\n", "Nov 27 15:07:47 hostname2 log file line 1\n"},
+	}
+
+	for i, fn := range files {
+		f, err := os.Open(fn)
+		if err != nil {
+			t.Fatal(err.Error())
+		}
+		defer f.Close()
+
+		s := bufio.NewScanner(f)
+		for j := 0; s.Scan(); j++ {
+			if s.Text() != expected[i][j] {
+				t.Errorf("Expected: %s \nGot: %s", expected[i][j], s.Text())
+			}
+		}
+	}
+}
