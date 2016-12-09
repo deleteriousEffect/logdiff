@@ -2,6 +2,7 @@ package diff
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"os"
 	"reflect"
@@ -9,6 +10,8 @@ import (
 	"testing"
 	"time"
 )
+
+var fakeWriter = bufio.NewWriter(&bytes.Buffer{})
 
 func TestSetTime(t *testing.T) {
 
@@ -54,24 +57,24 @@ func TestNewLine(t *testing.T) {
 	}
 }
 
-func TestLineReader(t *testing.T) {
+func TestScanLine(t *testing.T) {
 	f, err := os.Open("../../test/log1.txt")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer f.Close()
-	lg, err := newLog(f)
+	lg, err := newLog(f, fakeWriter)
 	if err != nil {
 		t.Error(err)
 	}
 
 	i := 1
 	for {
-		l, ok := lg.popLine()
+		ok := lg.scanLine()
 		if !ok {
 			break
 		}
-		if !strings.Contains(l.content, fmt.Sprintf("line %d", i)) {
+		if !strings.Contains(lg.currentLine.content, fmt.Sprintf("line %d", i)) {
 			t.Errorf("Expected to read line %d", i)
 		}
 		i++
@@ -106,11 +109,11 @@ func TestOldestLines(t *testing.T) {
 }
 
 func TestByOldestLines(t *testing.T) {
-	l1, err := newLog(strings.NewReader("Nov 27 14:33:59 hostname1 log file line 1\n"))
+	l1, err := newLog(strings.NewReader("Nov 27 14:33:59 hostname1 log file line 1\n"), fakeWriter)
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
-	l2, err := newLog(strings.NewReader("Nov 27 15:07:47 hostname2 log file line 1\n"))
+	l2, err := newLog(strings.NewReader("Nov 27 15:07:47 hostname2 log file line 1\n"), fakeWriter)
 	if err != nil {
 		t.Fatalf(err.Error())
 	}

@@ -38,27 +38,29 @@ func (l *line) setTime() error {
 }
 
 type log struct {
-	inFile  io.Reader
-	outFile io.Writer
+	inFile      io.Reader
+	outFile     io.Writer
+	currentLine line
 }
 
-func newLog(r io.Reader, w io.WriteCloser) (log, error) {
-	return log{r, w}, nil
+func newLog(r io.Reader, w io.Writer) (log, error) {
+	return log{r, w, line{}}, nil
 }
 
-func (lg log) popLine() (line, bool) {
+func (lg *log) scanLine() bool {
 	s := bufio.NewScanner(lg.inFile)
 	ok := s.Scan()
 	if !ok {
-		return line{}, ok
+		return ok
 	}
 
 	t := s.Text()
 	ln, err := newLine(t)
 	if err != nil {
-		return line{}, false
+		return false
 	}
-	return ln, ok
+	lg.currentLine = ln
+	return ok
 }
 
 func findTimeFormat(s string) (string, error) {
