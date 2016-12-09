@@ -39,7 +39,7 @@ func (l *line) setTime() error {
 
 type log struct {
 	inFile  io.Reader
-	outFile io.WriteCloser
+	outFile io.Writer
 }
 
 func newLog(r io.Reader, w io.WriteCloser) (log, error) {
