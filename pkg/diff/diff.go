@@ -38,15 +38,16 @@ func (l *line) setTime() error {
 }
 
 type log struct {
-	file io.Reader
+	inFile  io.Reader
+	outFile io.WriteCloser
 }
 
-func newLog(r io.Reader) (log, error) {
-	return log{r}, nil
+func newLog(r io.Reader, w io.WriteCloser) (log, error) {
+	return log{r, w}, nil
 }
 
 func (lg log) popLine() (line, bool) {
-	s := bufio.NewScanner(lg.file)
+	s := bufio.NewScanner(lg.inFile)
 	ok := s.Scan()
 	if !ok {
 		return line{}, ok
