@@ -2,16 +2,15 @@ package diff
 
 import (
 	"bufio"
-	"bytes"
 	"fmt"
+	"io/ioutil"
 	"os"
+	"os/exec"
 	"reflect"
 	"strings"
 	"testing"
 	"time"
 )
-
-var fakeWriter = bufio.NewWriter(&bytes.Buffer{})
 
 func TestSetTime(t *testing.T) {
 
@@ -63,7 +62,7 @@ func TestScanLine(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer f.Close()
-	lg, err := newLog(f, fakeWriter)
+	lg, err := newLog(f, f)
 	if err != nil {
 		t.Error(err)
 	}
@@ -109,39 +108,47 @@ func TestOldestLines(t *testing.T) {
 }
 
 func TestByOldestLines(t *testing.T) {
-	l1, err := newLog(strings.NewReader("Nov 27 14:33:59 hostname1 log file line 1\n"), fakeWriter)
+	tmp1, err := ioutil.TempFile("", "logdiff")
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
-	l2, err := newLog(strings.NewReader("Nov 27 15:07:47 hostname2 log file line 1\n"), fakeWriter)
+	defer tmp1.Close()
+	defer exec.Command("rm", "-fv", tmp1.Name()).Run()
+	tmp2, err := ioutil.TempFile("", "logdiff")
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
-	logs := []log{l1, l2}
-	files, err := ByOldestLines(logs...)
+	defer tmp2.Close()
+	defer exec.Command("rm", "-fv", tmp2.Name()).Run()
+	l1, err := newLog(strings.NewReader("Nov 27 14:33:59 hostname1 log file line 1\n"), tmp1)
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+	l2, err := newLog(strings.NewReader("Nov 27 15:07:47 hostname2 log file line 1\n"), tmp2)
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+	logs := []*log{&l1, &l2}
+	err = ByOldestLines(logs...)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
-	if len(files) == 0 {
-		t.Fatalf("No files returned: %v", files)
-	}
 
 	expected := [][]string{
-		{"Nov 27 14:33:59 hostname1 log file line 1\n", "\n"},
-		{"\n", "Nov 27 15:07:47 hostname2 log file line 1\n"},
+		{"Nov 27 14:33:59 hostname1 log file line 1", ""},
+		{"", "Nov 27 15:07:47 hostname2 log file line 1"},
 	}
 
-	for i, fn := range files {
-		f, err := os.Open(fn)
-		if err != nil {
-			t.Fatal(err.Error())
-		}
-		defer f.Close()
-
+	for i, l := range logs {
+		f, _ := os.Open(l.outFile.Name())
 		s := bufio.NewScanner(f)
-		for j := 0; s.Scan(); j++ {
+		for j := 0; j < len(expected); j++ {
+			s.Scan()
+			if s.Err() != nil {
+				t.Error(s.Err())
+			}
 			if s.Text() != expected[i][j] {
-				t.Errorf("Expected: %s \nGot: %s", expected[i][j], s.Text())
+				t.Errorf("Expected: '%s' \nGot: '%s'", expected[i][j], s.Text())
 			}
 		}
 	}

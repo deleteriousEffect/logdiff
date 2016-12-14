@@ -2,9 +2,10 @@ package diff
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
+	"os"
 	"time"
 )
 
@@ -39,12 +40,12 @@ func (l *line) setTime() error {
 
 type log struct {
 	inFile      io.Reader
-	outFile     io.Writer
+	outFile     *os.File
 	currentLine line
 }
 
-func newLog(r io.Reader, w io.Writer) (log, error) {
-	return log{r, w, line{}}, nil
+func newLog(r io.Reader, f *os.File) (log, error) {
+	return log{r, f, line{}}, nil
 }
 
 func (lg *log) scanLine() bool {
@@ -61,6 +62,21 @@ func (lg *log) scanLine() bool {
 	}
 	lg.currentLine = ln
 	return ok
+}
+
+func (lg *log) writeDiff(t time.Time) (int, error) {
+	if lg.currentLine.time.Equal(t) || lg.currentLine.time.Before(t) {
+		n, err := fmt.Fprintf(lg.outFile, lg.currentLine.content)
+		lg.currentLine = line{}
+		if err != nil {
+			return n, err
+		}
+	}
+	n, err := fmt.Fprintln(lg.outFile, "")
+	if err != nil {
+		return n, err
+	}
+	return n, nil
 }
 
 func findTimeFormat(s string) (string, error) {
@@ -92,72 +108,40 @@ func oldestLines(lines ...line) []string {
 	return oldest
 }
 
-// ByOldestLines diffs bufio.Scanners based on the time each line was logged and returns
-// a slice of temporary file names where the returns were written.
-func ByOldestLines(l ...log) ([]string, error) {
-	//
-	//	numFiles := len(f)
-	//
-	//	// Initialize tempfiles, scanners, and lines.
-	//	tempFiles := make([]*os.File, numFiles)
-	//	lineReaders := make([]func() (line, bool), numFiles)
-	//	lines := make([]line, numFiles)
-	//	for i, file := range f {
-	//		temp, err := ioutil.TempFile("/tmp", fmt.Sprintf("logdiff_tmp%d", i))
-	//		if err != nil {
-	//			log.Fatal(err)
-	//			return nil, err
-	//		}
-	//		tempFiles[i] = temp
-	//		lineReaders[i] = lineReader(file)
-	//	}
-	//
-	//	for {
-	//		reachedEnd := 0
-	//		// Create a new line from each file if the line content is blank.
-	//		for i, l := range lines {
-	//			if l.content == "" {
-	//				l, ok := lineReaders[i]()
-	//				// If we can't read it, assume we've reached the end of the file.
-	//				if !ok {
-	//					reachedEnd++
-	//				}
-	//				lines[i] = l
-	//			}
-	//		}
-	//
-	//		// If a file starts with the oldest timestamp, write it to the tempfiles.
-	//		// Otherwise, write a newline.
-	//		for i, f := range tempFiles {
-	//			oldest := oldestTime(lines...)
-	//			if lines[i].time.Equal(oldest) {
-	//				_, err := f.WriteString(lines[i].content)
-	//				if err != nil {
-	//					return nil, err
-	//				}
-	//				lines[i] = line{}
-	//				continue
-	//			}
-	//			_, err := f.WriteString("\n")
-	//			if err != nil {
-	//				return nil, err
-	//			}
-	//
-	//		}
-	//		// If we've reached the end of every file, we're done.
-	//		if reachedEnd >= numFiles {
-	//			return tempFiles, nil
-	//		}
-	//	}
-	tmp, err := ioutil.TempFile("", "logdiff")
-	if err != nil {
-		return nil, err
+// ByOldestLines diffs logs based on the time each line was logged and writes
+// the results to the logs outFile.
+func ByOldestLines(logs ...*log) error {
+	defer func() {
+		for _, lg := range logs {
+			lg.outFile.Sync()
+			lg.outFile.Close()
+		}
+	}()
+	for {
+		oldestTime := time.Now()
+		seenEnd := 0
+		for _, lg := range logs {
+			if lg.currentLine.content == "" {
+				ok := lg.scanLine()
+				if !ok {
+					seenEnd++
+				}
+			}
+			if seenEnd >= len(logs) {
+				return nil
+			}
+			if lg.currentLine.time.Equal(oldestTime) || lg.currentLine.time.Before(oldestTime) {
+				oldestTime = lg.currentLine.time
+			}
+		}
+		for _, lg := range logs {
+			n, err := lg.writeDiff(oldestTime)
+			if err != nil {
+				return err
+			}
+			if n == 0 {
+				return errors.New("Nothing written to outFile")
+			}
+		}
 	}
-	_, err = fmt.Fprintf(tmp, "Test String\nTest String\n")
-	if err != nil {
-		return nil, err
-	}
-	tmp.Sync()
-	tmp.Close()
-	return []string{tmp.Name()}, nil
 }
