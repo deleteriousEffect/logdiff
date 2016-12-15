@@ -23,11 +23,14 @@ OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 package main
 
 import (
-	"bufio"
 	"errors"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"os"
+
+	"github.com/hayswim/logdiff/pkg/diff"
+	"github.com/hayswim/logdiff/pkg/display"
 )
 
 func main() {
@@ -51,6 +54,7 @@ func run() error {
 		return errors.New("Expected a file")
 	}
 
+	var logs []*diff.Log
 	for _, file := range args {
 		file, err := os.Open(file)
 		if err != nil {
@@ -58,14 +62,23 @@ func run() error {
 		}
 		defer file.Close()
 
-		scanner := bufio.NewScanner(file)
-		for scanner.Scan() {
-			fmt.Println(scanner.Text())
-		}
-
-		if err := scanner.Err(); err != nil {
+		tmp, err := ioutil.TempFile("", "logdiff")
+		if err != nil {
 			return err
 		}
+		defer tmp.Close()
+
+		l, err := diff.NewLog(file, tmp)
+		if err != nil {
+			return err
+		}
+		logs = append(logs, &l)
 	}
+	err := diff.ByOldestLines(logs...)
+	if err != nil {
+		return err
+	}
+
+	display.Print(" ]|[ ", logs...)
 	return nil
 }

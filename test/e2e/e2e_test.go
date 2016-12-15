@@ -55,20 +55,20 @@ func TestTwoLogs(t *testing.T) {
 
 	expected := []string{"Nov 27 14:33:59 hostname1 log file line 1 ]|[ Nov 27 14:33:59 hostname2 log file line 1",
 		"Nov 27 14:34:05 hostname1 log file line 2 ]|[ Nov 27 14:34:05 hostname2 log file line 2",
-		"Nov 27 14:34:05 hostname1 log file line 3 ]|[",
-		"]|[ Nov 27 14:34:05 hostname2 log file line 3",
-		"]|[ Nov 27 15:06:47 hostname2 log file line 4",
+		"Nov 27 14:34:05 hostname1 log file line 3 ]|[ Nov 27 14:34:05 hostname2 log file line 3",
+		" ]|[ Nov 27 15:06:47 hostname2 log file line 4",
 		"Nov 27 15:07:47 hostname1 log file line 4 ]|[ Nov 27 15:07:47 hostname2 log file line 5",
 		"Nov 27 15:07:47 hostname1 log file line 5 ]|[ Nov 27 15:07:47 hostname2 log file line 6",
-		"Nov 27 15:07:47 hostname1 log file line 6 ]|[",
-		"Nov 27 15:07:47 hostname1 log file line 7 ]|[",
-		"Nov 27 15:07:47 hostname1 log file line 8 ]|[",
-		"]|[Nov 27 15:08:49 hostname2 log file line 8"}
+		"Nov 27 15:07:47 hostname1 log file line 6 ]|[ ",
+		"Nov 27 15:07:47 hostname1 log file line 7 ]|[ ",
+		"Nov 27 15:07:47 hostname1 log file line 8 ]|[ ",
+		" ]|[ Nov 27 15:07:49 hostname2 log file line 7",
+		" ]|[ Nov 27 15:08:49 hostname2 log file line 8"}
 
 	t.Logf("Comparing %s and %s", log1, log2)
 	for i, line := range expected {
 		if line != actual[i] {
-			t.Errorf("\n     Got:\n            %s\nExpected:\n            %s\n",
+			t.Errorf("\n     Got:\n            '%s'\nExpected:\n            '%s'\n",
 				actual[i], line)
 		}
 	}

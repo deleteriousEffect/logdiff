@@ -38,17 +38,18 @@ func (l *line) setTime() error {
 	return nil
 }
 
-type log struct {
+// Log represents a log.
+type Log struct {
 	inFile      io.Reader
-	outFile     *os.File
+	OutFile     *os.File
 	currentLine line
 }
 
-func newLog(r io.Reader, f *os.File) (log, error) {
-	return log{r, f, line{}}, nil
+func NewLog(r io.Reader, f *os.File) (Log, error) {
+	return Log{r, f, line{}}, nil
 }
 
-func (lg *log) scanLine() bool {
+func (lg *Log) scanLine() bool {
 	s := bufio.NewScanner(lg.inFile)
 	ok := s.Scan()
 	if !ok {
@@ -64,15 +65,15 @@ func (lg *log) scanLine() bool {
 	return ok
 }
 
-func (lg *log) writeDiff(t time.Time) (int, error) {
+func (lg *Log) writeDiff(t time.Time) (int, error) {
 	if lg.currentLine.time.Equal(t) || lg.currentLine.time.Before(t) {
-		n, err := fmt.Fprintf(lg.outFile, lg.currentLine.content)
+		n, err := fmt.Fprintf(lg.OutFile, lg.currentLine.content)
 		lg.currentLine = line{}
 		if err != nil {
 			return n, err
 		}
 	}
-	n, err := fmt.Fprintln(lg.outFile, "")
+	n, err := fmt.Fprintln(lg.OutFile, "")
 	if err != nil {
 		return n, err
 	}
@@ -110,25 +111,37 @@ func oldestLines(lines ...line) []string {
 
 // ByOldestLines diffs logs based on the time each line was logged and writes
 // the results to the logs outFile.
-func ByOldestLines(logs ...*log) error {
+func ByOldestLines(logs ...*Log) error {
+	_ = "breakpoint"
 	defer func() {
 		for _, lg := range logs {
-			lg.outFile.Sync()
-			lg.outFile.Close()
+			lg.OutFile.Sync()
+			lg.OutFile.Close()
 		}
 	}()
+	scanners := make([]*bufio.Scanner, len(logs))
+	for i, lg := range logs {
+		scanners[i] = bufio.NewScanner(lg.inFile)
+	}
 	for {
 		oldestTime := time.Now()
 		seenEnd := 0
-		for _, lg := range logs {
+		for i, lg := range logs {
 			if lg.currentLine.content == "" {
-				ok := lg.scanLine()
+				ok := scanners[i].Scan()
 				if !ok {
 					seenEnd++
+					if seenEnd >= len(logs) {
+						return nil
+					}
+					continue
 				}
-			}
-			if seenEnd >= len(logs) {
-				return nil
+				t := scanners[i].Text()
+				ln, err := newLine(t)
+				if err != nil {
+					return err
+				}
+				lg.currentLine = ln
 			}
 			if lg.currentLine.time.Equal(oldestTime) || lg.currentLine.time.Before(oldestTime) {
 				oldestTime = lg.currentLine.time

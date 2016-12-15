@@ -62,7 +62,7 @@ func TestScanLine(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer f.Close()
-	lg, err := newLog(f, f)
+	lg, err := NewLog(f, f)
 	if err != nil {
 		t.Error(err)
 	}
@@ -120,15 +120,15 @@ func TestByOldestLines(t *testing.T) {
 	}
 	defer tmp2.Close()
 	defer exec.Command("rm", "-fv", tmp2.Name()).Run()
-	l1, err := newLog(strings.NewReader("Nov 27 14:33:59 hostname1 log file line 1\n"), tmp1)
+	l1, err := NewLog(strings.NewReader("Nov 27 14:33:59 hostname1 log file line 1\n"), tmp1)
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
-	l2, err := newLog(strings.NewReader("Nov 27 15:07:47 hostname2 log file line 1\n"), tmp2)
+	l2, err := NewLog(strings.NewReader("Nov 27 15:07:47 hostname2 log file line 1\n"), tmp2)
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
-	logs := []*log{&l1, &l2}
+	logs := []*Log{&l1, &l2}
 	err = ByOldestLines(logs...)
 	if err != nil {
 		t.Fatal(err.Error())
@@ -140,7 +140,7 @@ func TestByOldestLines(t *testing.T) {
 	}
 
 	for i, l := range logs {
-		f, _ := os.Open(l.outFile.Name())
+		f, _ := os.Open(l.OutFile.Name())
 		s := bufio.NewScanner(f)
 		for j := 0; j < len(expected); j++ {
 			s.Scan()
