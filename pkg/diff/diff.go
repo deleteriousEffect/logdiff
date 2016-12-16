@@ -32,7 +32,8 @@ func (l *line) setTime() error {
 	}
 	lineTime, err := time.Parse(format, l.content[:len(format)])
 	if err != nil {
-		return err
+		l.time = time.Time{}
+		return nil
 	}
 	l.time = lineTime
 	return nil

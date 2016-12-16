@@ -1,10 +1,13 @@
 package display
 
-import "bufio"
-import "fmt"
-import "github.com/hayswim/logdiff/pkg/diff"
-import "os"
-import "strings"
+import (
+	"bufio"
+	"fmt"
+	"os"
+	"strings"
+
+	"github.com/hayswim/logdiff/pkg/diff"
+)
 
 // Print writes to standard out.
 func Print(sep string, logs ...*diff.Log) {
