@@ -148,7 +148,7 @@ func TestByOldestLines(t *testing.T) {
 				t.Error(s.Err())
 			}
 			if s.Text() != expected[i][j] {
-				t.Errorf("Expected: '%s' \nGot: '%s'", expected[i][j], s.Text())
+				t.Errorf("\nExpected: '%s' \n     Got: '%s'", expected[i][j], s.Text())
 			}
 		}
 	}
