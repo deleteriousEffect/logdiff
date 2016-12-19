@@ -28,6 +28,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/exec"
 
 	"github.com/hayswim/logdiff/pkg/diff"
 	"github.com/hayswim/logdiff/pkg/display"
@@ -67,6 +68,7 @@ func run() error {
 			return err
 		}
 		defer tmp.Close()
+		defer exec.Command("rm", "-f", tmp.Name()).Run()
 
 		l, err := diff.NewLog(file, tmp)
 		if err != nil {
